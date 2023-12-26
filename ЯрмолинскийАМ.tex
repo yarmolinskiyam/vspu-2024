@@ -1,0 +1,287 @@
+\documentclass{vspuart}
+\usepackage[russian]{babel}
+\usepackage[cp1251]{inputenc}
+\usepackage{cmap}
+
+\lstnewenvironment{TeXsrc}{\lstset{language=TeX,keywordstyle=\ttfamily,xleftmargin=0.75cm}}{}
+\setcounter{page}{1} %Указание номера страницы (--> для редактора Сборника)
+\sloppy % запрет переносов
+\tolerance=500
+\hyphenpenalty=10000
+
+%Используемый класс VSPUart по умолчанию подключает следующие стандартные стилевые пакеты (в скобках название семейства, в которое входит пакет):
+% amsthm (всегда), amsmath (amsmath),  amstext (amsmath), amsbsy (amsmath), amsfonts (amsfonts), amssymb (amsfonts), eucal (amsfonts), eufrak (amsfonts), cite (cite), bm (tools), graphicx (graphicx), indentfirst (feature), sectsty (feature), titlesec (feature), verbatim (hyperref), listings (hyperref), hyperref (hyperref).
+% В случае, если из-за отсутствия какого-либо семейства пакетов Вам не удаётся откомпилировать файл, Вы можете запретить подключение пакетов из этого семейства, используя необязательный аргумент noXXX, где XXX - название семейства. Например, пакет bm может быть отключен с помощью необязательного аргумента notools. Необязательный аргумент noext запрещает подключение всех пакетов.
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+%Просим вас при подготовке текста, по возможности, воздержаться от подключения дополнительных стилевых пакетов, переопределения стандартных и определения новых команд.
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+\begin{document}
+
+\UDK{(обязательно укажите(!))}
+\Title{МОБИЛЬНЫЕ РОБОТЫ В МЕЖДУНАРОДНОМ СТАНДАРТЕ ROBOCUP SSL:\\
+СИСТЕМА УПРАВЛЕНИЯ}
+
+
+\aut{А.М. Ярмолинский}
+\org{Институт Проблем Машиноведения РАН}
+\adr{Россия, 199178,г.Санкт-Петербург,Большой проспект В.О.,д.61 }
+\email{ipmash@ipme.ru}
+
+\aut{И.О. Фамилия (второго автора)}
+\org{Официальное наименование организации второго автора}
+\adr{Страна, ИНДЕКС, Город, Улица, ДОМ}
+\email{abc@def.org}
+
+\Keywords{роботы, системы управления, RoboCup SSL, }
+
+\begin{Abstract}
+	В докладе ведется обзор системы управления роботами сборной команды Санкт-Петербурга SPBUnited в рамках робототехнических соревнований RoboCup SSL.
+\end{Abstract}
+
+
+\section{Введение}
+
+RoboCup SSL (Small Size League) - это часть исследовательской федерации RoboCup, посвященная мультиагентной координации и управлению в контексте футбола роботов \cite{robocup_about}. В лиге проводятся футбольные матчи 11 против 11 (6 против 6 в дивизионе B), в которых маленькие роботы, соответствующие определенным размерам, играют с оранжевым мячом для гольфа на зеленом поле с ковровым покрытием (рис. \ref{robocup_overview}). Компьютеры за пределами поля используются для обработки данных, необходимых для координации и управления, а связь с роботами беспроводная, обычно с помощью специальных коммерческих радиопередатчиков/приемников. Лига также поддерживает систему технического зрения с открытым исходным кодом под названием SSL-Vision для отслеживания объектов на поле. Основной целью RoboCup является развитие интеллектуальных роботов. Первоначальная задача, поставленная в 1997 году, - создать команду роботов, способных к 2050 году выиграть чемпионат мира по футболу среди людей. Лига также предоставляет такие программные инструменты, как SSL-Game-Controller, симулятор grSim и SSL-Match-Stats, которые команды могут использовать в своих соревнованиях. Правила соревнований обновляются ежегодно, а конкретные изменения прописаны в сводах правил на каждый год.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.8\linewidth]{images/robocup_overview.png}
+\caption{Роботы на поле RoboCup SSL}\label{robocup_overview}
+\end{center}
+\end{figure}
+
+
+\section{Постановка задачи}
+
+Цель игры в RoboCup Small Size League (SSL) - забить больше голов, чем команда соперника, за установленное время. В типичной игре поле делится на две половины, и каждая команда пытается забить мяч в ворота соперника. Побеждает та команда, которая забьет больше голов.
+
+Игра регулируется набором правил, разработанных для обеспечения честной игры и безопасности. Эти правила постоянно обновляются и изменяются, чтобы стимулировать инновации, способствовать развитию передовых технологий искусственного интеллекта и робототехники, а также поддерживать интерес зрителей. Например, в последние годы правила были обновлены, чтобы разрешить замену робота во время игры, избежать ненужных процедур размещения мяча и превратить многочисленные фолы в красные карточки вместо штрафных ударов \cite{robocup_sslgoals,robocup_rules}.
+
+\subsection{Обзор программного обеспечения}
+
+Данные идут в следующем виде:
+\begin{itemize}
+	\item SSL-Vision
+	\item LARCmaCS
+	\item strategy-bridge
+	\item Controller
+	\item strategy-bridge
+	\item LARCmaCS
+	\item Станция связи
+	\item Роботы
+\end{itemize}
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.4\linewidth]{images/robocup_dataflow.png}
+\caption{Схема движения данных во время игры}\label{robocup_dataflow}
+\end{center}
+\end{figure}
+
+\section{Архитектура системы управления}
+
+В системе управления реализована идея иерархического подхода к управлению роботами и их взаимодействию в игровой среде. Эта идея базируется на разделении задач управления на несколько уровней, каждый из которых отвечает за выполнение локальных задач с учетом предполагаемой производительности уровней ниже. В рамках нашего исследования были выделены четыре ключевых уровня: стратегия (Strategy), маршрутизация (Router), высокоуровневое (RobotHI) и низкоуровневое управление роботами (RobotLO) (рис. \ref{control_system_architecture}).
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.8\linewidth]{images/control_system_architecture.png}
+\caption{Архитектура системы управления}\label{control_system_architecture}
+\end{center}
+\end{figure}
+
+\subsection{Общее описание уровней}
+
+\subsubsection{Strategy}
+На уровне стратегии решаются задачи определения требуемого положения робота в соответствии с текущей ситуацией на поле. Этот уровень включает модули предсказания движений вражеских роботов, анализа траекторий полета мяча, учета рисков и формирования команд для передачи на следующий уровень (рис. \ref{cs_strategy}).
+
+% \begin{figure}[htb]
+% \centering
+% \begin{minipage}{0.3\linewidth}
+%   \centering
+%   \includegraphics[width=\linewidth]{images/cs_strategy.png}
+%   \caption{Иллюстрация работы уровня Strategy - определение требуемых положений союзных роботов на поле}\label{cs_strategy}
+% \end{minipage}\hfill
+% \begin{minipage}{0.3\linewidth}
+%   \centering
+%   \includegraphics[width=\linewidth]{images/cs_router.png}
+%   \caption{Иллюстрация работы уровня Router - расчет оптимальных маршрутов для каждого робота на поле}\label{cs_router}
+% \end{minipage}\hfill
+% \begin{minipage}{0.3\linewidth}
+%   \centering
+%   \includegraphics[width=\linewidth]{images/cs_robothi.png}
+%   \caption{Иллюстрация работы уровня RobotHI - расчет требуемых скоростей робота в глобальной системе координат, исходя из текущего маршрута}\label{cs_robothi}
+% \end{minipage}
+% \end{figure}
+
+
+% \begin{figure}[htb]
+% \begin{center}
+% \includegraphics[width=0.6\linewidth]{images/cs_strategy.png}
+% \caption{Иллюстрация работы уровня Strategy - определение требуемых положений союзных роботов на поле}\label{cs_strategy}
+% \end{center}
+% \end{figure}
+
+\subsubsection{Router}
+Уровень маршрутизации отвечает за построение оптимального пути для каждого робота на поле. Происходит оценка положения, скорости и препятствий, формируются путевые точки, которые передаются высокоуровневому управлению соответствующим роботом (рис. \ref{cs_router}).
+
+% \begin{figure}[htb]
+% \begin{center}
+% \includegraphics[width=0.6\linewidth]{images/cs_router.png}
+% \caption{Иллюстрация работы уровня Router - расчет оптимальных маршрутов для каждого робота на поле}\label{cs_router}
+% \end{center}
+% \end{figure}
+
+\subsubsection{RobotHI}
+Высокоуровневое управление роботами получает необходимое количество точек и определяет требуемые скорости робота в глобальной системе координат и другие сигналы (такие как скорость вращения дрибблера и команды на пинок мяча), которые передаются низкоуровневой системе управления (рис. \ref{cs_robothi}).
+
+% \begin{figure}[htb]
+% \begin{center}
+% \includegraphics[width=0.6\linewidth]{images/cs_robothi.png}
+% \caption{Иллюстрация работы уровня RobotHI - расчет требуемых скоростей робота в глобальной системе координат, исходя из текущего маршрута}\label{cs_robothi}
+% \end{center}
+% \end{figure}
+
+\subsubsection{RobotLO}
+Низкоуровневая система управления, в свою очередь, пересчитывает требуемые скорости робота из глобальной системы координат в локальную СК робота и определяет управляющие воздействия на каждый из моторов ходовой части.
+
+\begin{figure}[htb]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/cs_strategy.png}
+        \caption{Иллюстрация работы уровня Strategy - определение требуемых положений союзных роботов на поле}\label{cs_strategy}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/cs_router.png}
+        \caption{Иллюстрация работы уровня Router - расчет оптимальных маршрутов для каждого робота на поле}\label{cs_router}
+    \end{minipage}
+
+    % \medskip
+
+    % \begin{minipage}{0.45\textwidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{images/cs_robothi.png}
+    %     \caption{Иллюстрация работы уровня RobotHI - расчет требуемых скоростей робота в глобальной системе координат, исходя из текущего маршрута}\label{cs_robothi}
+    % \end{minipage}
+	% \hfill
+    % \begin{minipage}{0.45\textwidth}
+    %     \centering
+    %     \rule{4cm}{3cm} % Placeholder for the 4th image
+    %     \caption{Placeholder for the 4th image}\label{placeholder}
+    % \end{minipage}
+\end{figure}
+
+\begin{figure}[htb]
+    \centering
+    % \begin{minipage}{0.45\textwidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{images/cs_strategy.png}
+    %     \caption{Иллюстрация работы уровня Strategy - определение требуемых положений союзных роботов на поле}\label{cs_strategy}
+    % \end{minipage}\hfill
+    % \begin{minipage}{0.45\textwidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{images/cs_router.png}
+    %     \caption{Иллюстрация работы уровня Router - расчет оптимальных маршрутов для каждого робота на поле}\label{cs_router}
+    % \end{minipage}
+
+    % \medskip
+
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/cs_robothi.png}
+        \caption{Иллюстрация работы уровня RobotHI - расчет требуемых скоростей робота в глобальной системе координат, исходя из текущего маршрута}\label{cs_robothi}
+    \end{minipage}
+	\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \rule{4cm}{3cm} % Placeholder for the 4th image
+        \caption{Placeholder for the 4th image}\label{placeholder}
+    \end{minipage}
+\end{figure}
+
+
+
+% состоит из двух частей: регулятора скорости для определения требуемого вектора скорости и преобразования системы координат из локальной в глобальную, а также расчета требуемых скоростей каждого из моторов. Для маршрутизации используется алгоритм векторных путей.
+
+\section{Заключение}
+
+В динамичном мире Малой лиги RoboCup Soccer (SSL) участие команды SPbUnited в Соревнованиях Бразильской Робототехнической Лиги 2023 (CBR 2023), проходивших в Бразилии с 7 по 14 октября 2023 года, ознаменовалось интересным событием \cite{brazil239_news}. Будучи единственной российской командой в RoboCup Soccer SSL, SPbUnited, основанная Сергеем Александровичем Филипповым и Александром Львовичем Фрадковым, черпала силы в разношерстном коллективе студентов и педагогов, начиная с Президентского физико-математического лицея № 239 и заканчивая различными университетами. Экспедиция состоялась благодаря финансовой поддержке ПАО "Газпром нефть", ИПМаш РАН и Благотворительного фонда "Финист" ООО "НПО "СтарЛайн".
+
+Участие в Бразилии стало вторым выходом SPbUnited на мировую SSL-сцену. По сравнению с прошлым годом соревнования продемонстрировали рост как количества команд, так и общего качества игры. На фоне таких сильных соперников, как действующие чемпионы мира, RoboCIn, SPbUnited преодолела групповой этап, заняв второе место в своей группе. Однако в итоговом рейтинге они заняли пятое место. Роботы продемонстрировали свое мастерство, одержав техническую победу и сыграв вничью с опытными соперниками, имеющими десятилетнюю историю RoboCup SSL. Хотя сложный четвертьфинал завершился поражением в один мяч от команды, занявшей третье место, путешествие выявило стратегические пробелы.
+
+Послетурнирный анализ показал, что наша стратегия, эффективная против большинства команд, требует доработки для победы над фаворитами турнира. Отсутствие домашних матчей в России помешало нашей подготовке, что послужило поводом для всестороннего пересмотра нашего подхода. В ближайшее время на портале RoboFinist появятся задокументированные матчи против фаворитов КБР 2023, в которых будет представлен подробный отчет о нашем пути \cite{brazil239_match_records}.
+
+Сердечная благодарность выражается нашим спонсорам, чья неизменная поддержка позволила осуществить эту экспедицию, и нашим наставникам, которые провели нас через сложный процесс подготовки. По мере того как мы будем оттачивать стратегии и устранять выявленные недостатки, этот опыт станет поворотной ступенькой для дальнейшего развития SPbUnited и продвижения этого соревновательного жанра в России.
+
+
+
+\begin{thebibliography}{XX}
+
+% \bibitem{1}
+% Чернышев К.Р. К обеспечению образовательного процесса в области моделирования систем // Качество. Инновации. Образование. 2007. №~9. С.~39--50.
+
+% \bibitem{2}
+% Chernyshev K.R. A Paper on the Identification of Stochastic Plants
+% // Automation and Remote Control. 2002. Vol.~63, No.~4. P.~687.
+
+% \bibitem{3}
+% Чернышев К.Р. Рецензия на книгу И.В. Прангишвили, Ф.Ф. Пащенко, Б.П.
+% Бусыгина <<Системные законы и закономерности в электродинамике,
+% природе и обществе>> // Информационно-управляющие системы. 2006. №~5. С.~51--54.
+
+% \bibitem{4}
+% Чернышев К.Р. Вопросы идентификации: состоятельные меры зависимости.
+% М.: ИПУ РАН, 2007. 60~с.
+
+% \bibitem{5}
+% Чернышев К.Р. Об одном алгоритме рекуррентной параметрической
+% идентификации. Труды ИПУ РАН. Том XIII. М.: Институт проблем
+% управления им. В.А.~Трапезникова РАН, 2001. C.~39--46.
+
+% \bibitem{6}
+% Чернышев К.Р. К обеспечению образовательного процесса в области
+% стохастического моделирования (Эссе № 2) // Труды VI Международной
+% конференции <<Идентификация систем и задачи управления>> SICPRO '07.
+% Москва, 29 января -- 1 февраля 2007~г. М.: Институт проблем
+% управления им. В.А.~Трапезникова РАН, 2007. С.~1632--1671.
+
+% \bibitem{7}
+% Chernyshov K.R., Jharko E.Ph. Learning ``Ad Absurdum'': A Control
+% Education Application // Proceedings of the Second IASTED
+% International Conference ACIT - Automation, Control and
+% Applications. Novosibirsk, Russia, 2005. Anaheim-Calgary-Zurich:
+% ACTA Press, 2005. Vol.~1. P.~393--397.
+
+% \bibitem{8}
+% LAM/MPI Parallel Computing. \url{http://www.osc.edu/lam.html} (дата обращения: 15.06.2023).
+
+% \bibitem{9}
+% \url{http://www.udcc.org/udcsummary/php/index.php} (дата обращения: 15.06.2023).
+
+\bibitem{robocup_about}
+\url{https://ssl.robocup.org/about/} (дата обращения: 26.12.2023)
+
+\bibitem{robocup_sslgoals}
+\url{https://robocup-ssl.github.io/ssl-goals/sslgoals.pdf} (дата обращения: 26.12.2023)
+
+\bibitem{robocup_rules}
+\url{https://ssl.robocup.org/rules/} (дата обращения: 26.12.2023)
+
+\bibitem{brazil239_news}
+\url{https://239.ru/robot/tpost/rmrepiiur1-nasha-komanda-prinyala-uchastie-v-otkrit} (дата обращения: 26.12.2023)
+
+\bibitem{brazil239_match_records}
+\url{https://www.youtube.com/playlist?list=PLdtGqMuKqq4xnZ6UOcP74L7y8fWG9zagE} (дата обращения: 26.12.2023)
+
+\bibitem{code_repo}
+\url{https://github.com/SPBUnited/strategy} (дата обращения: 26.12.2023)
+
+\end{thebibliography}
+
+\end{document}
